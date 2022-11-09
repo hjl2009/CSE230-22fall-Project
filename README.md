@@ -15,16 +15,14 @@ Specifically, the players play the game according to the following simple rules:
 - The game ends when no additional pieces from either player can be placed.
 - The score of a player is determined by the total number of squares occupied by the pieces of the corresponding color.
 
-For more details, please check [wiki](https://en.wikipedia.org/wiki/Blokus)
+For more details, please check [wiki](https://en.wikipedia.org/wiki/Blokus).
 
 Our main goal is to implement the two-player version of the Blokus game, which supports all the basic gameplay functionalities.
 
 ## Details
+The project will be implemented using Haskell with the brick library. Based on our preliminary design, we are currently planning on implementing the following functionalities:
 
-The functions we will implement are listed below:
-
-- 1 The basic logic of the game.
-- 2 Save & Load
-- 3 Multiplayer mode
-- 4 Single player mode
-- 5 Simple AI?
+1. The basic logic of the game. I.e., providing available pieces, placement of pieces, validations, tracking scores, etc.
+2. Saving and loading the state of the game.
+3. Multiplayer mode that allows two players to play the game.
+4. (If time permits) Single-player mode with the support of a simple AI player.
