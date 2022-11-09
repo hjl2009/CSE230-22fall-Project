@@ -1,9 +1,9 @@
 # CSE230-22fall-Project
 ## Basic Information
 
-Team members: Heran Wang, Jiale Huang, Yizhao Zhang, Yulin Luo
-Language: Haskell
-Library: brick
+- Team members: Heran Wang, Jiale Huang, Yizhao Zhang, Yulin Luo
+- Language: Haskell
+- Library: brick
 
 ## Project Goal
 
