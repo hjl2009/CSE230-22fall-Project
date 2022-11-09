@@ -23,8 +23,8 @@ Our main goal is to implement the two-player version of the Blokus game, which s
 
 The functions we will implement are listed below:
 
-1 The basic logic of the game.
-2 Save & Load
-3 Multiplayer mode
-4 Single player mode
-5 Simple AI?
+- 1 The basic logic of the game.
+- 2 Save & Load
+- 3 Multiplayer mode
+- 4 Single player mode
+- 5 Simple AI?
