@@ -41,7 +41,7 @@ library:
   source-dirs: src
 
 executables:
-  blokell-exe:
+  blokell:
     main:                Main.hs
     source-dirs:         app
     ghc-options:

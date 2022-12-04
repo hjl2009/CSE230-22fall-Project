@@ -26,6 +26,7 @@ source-repository head
 library
   exposed-modules:
       Blokus
+      UI.Game
   other-modules:
       Paths_blokell
   hs-source-dirs:
@@ -39,7 +40,7 @@ library
     , vty
   default-language: Haskell2010
 
-executable blokell-exe
+executable blokell
   main-is: Main.hs
   other-modules:
       Paths_blokell
