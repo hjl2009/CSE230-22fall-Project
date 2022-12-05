@@ -14,8 +14,7 @@ module Blokus
     , Block(..), shape, center, direction
     , Game(..), board, history, currentIndex, currentBlock
     , blockTiles
-    , isBlockInbound
-    , isBlockPartialInbound
+    , moveBlockInbound
     , isValidBlock
     , placeBlock
     , Dir(..)
@@ -29,7 +28,7 @@ module Blokus
 import Control.Monad (liftM)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
-import Lens.Micro.Platform ( makeLenses )
+import Lens.Micro.Platform
 import Data.List (find)
 
 boardSize :: Int
@@ -151,11 +150,18 @@ isPosBad b p x = adj [(-1, 0), (1, 0), (0, -1), (0, 1)]
 isPosInbound :: V2 -> Bool
 isPosInbound (x, y) = 0 <= x && x < boardSize && 0 <= y && y < boardSize
 
-isBlockInbound :: Block -> Bool
-isBlockInbound k = all isPosInbound $ blockTiles k
-
-isBlockPartialInbound :: Block -> Bool
-isBlockPartialInbound k = any isPosInbound $ blockTiles k
+moveBlockInbound :: Block -> Block
+moveBlockInbound k = tryMove UU (countInbound k) k
+    where
+        m = length $ polyominoTiles $ _shape k
+        countInbound kk = sum [if isPosInbound x then 1 else 0 | x <- blockTiles kk]
+        tryMove d n kk
+            | m == n = kk
+            | n' > n = tryMove UU n' k'
+            | otherwise = tryMove (succ d) n kk
+            where
+                k' = kk & center %~ trans d
+                n' = countInbound k'
 
 isValidBlock :: Board -> Block -> Bool
 isValidBlock b k = all (isPosFree b) t && not (any (isPosBad b $ _player k) t) && any (isPosGood b $ _player k) t && all isPosInbound t
@@ -166,7 +172,7 @@ placeBlock :: Block -> Board -> Board
 placeBlock k b = M.union b $ M.fromList [(x, _player k) | x <- blockTiles k]
 
 data Dir = UU | DD | LL | RR
-    deriving (Eq, Show)
+    deriving (Eq, Show, Enum)
 
 add :: V2 -> V2 -> V2
 add (x0, y0) (x1, y1) = (x0 + x1, y0 + y1)
@@ -185,7 +191,7 @@ currentPlayer g = M.findWithDefault Def (outerCorners !! _currentIndex g) $ _boa
 
 
 genAvailBlockOr :: Game -> (Polyomino -> Polyomino) -> Polyomino -> Maybe Polyomino
-genAvailBlockOr g f pm = nxt $ (f pm)
+genAvailBlockOr g f pm = nxt $ f pm
     where
         nxt x
             | x == pm = Nothing
@@ -200,10 +206,9 @@ genPredBlock :: Game -> Maybe Block
 genPredBlock g = liftM (polyToBlock g) $ genAvailBlockOr g predPoly (fromMaybe I1 $ liftM _shape $ _currentBlock g)
 
 polyToBlock :: Game -> Polyomino -> Block
-polyToBlock g pm =
-    case _currentBlock g of
-        Nothing -> Block pm (playerPos g) (D8 0 0) $ currentPlayer g
-        Just k -> k {_shape = pm}
+polyToBlock g pm = moveBlockInbound $ case _currentBlock g of
+    Nothing -> Block pm (playerPos g) (D8 0 0) $ currentPlayer g
+    Just k -> k {_shape = pm}
 
 playerPos :: Game -> V2
-playerPos g = fromMaybe (innerCorners !! _currentIndex g) $ (find ((== currentPlayer g) . _player) $ _history g) >>= return . _center
+playerPos g = fromMaybe (innerCorners !! _currentIndex g) $ find ((== currentPlayer g) . _player) (_history g) >>= return . _center

@@ -132,16 +132,10 @@ nextPlayer :: EventM Name Gameplay ()
 nextPlayer = (game.currentIndex %= \i -> mod (i + 1) 4) >> game.currentBlock .= Nothing
 
 move :: Dir -> EventM Name Gameplay ()
-move d = do
-    kk <- use $ game.currentBlock
-    case kk of
-        Nothing -> return ()
-        Just k -> do
-            let k' = (center %~ trans d) k
-            when ((if isBlockInbound k then isBlockInbound else isBlockPartialInbound) k') $ game.currentBlock .= Just k'
+move d = game.currentBlock._Just %= moveBlockInbound . (center %~ trans d)
 
 rotate :: D8 -> EventM Name Gameplay ()
-rotate d = game.currentBlock._Just.direction %= compose' d
+rotate d = game.currentBlock._Just %= moveBlockInbound . (direction %~ compose' d)
 
 
 toColor :: Player -> V.Color
