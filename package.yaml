@@ -50,6 +50,7 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - blokell
+    - optparse-applicative
 
 tests:
   blokell-test:

@@ -15,6 +15,7 @@ module Blokus
     , Game(..), board, history, currentIndex, currentBlock
     , blockTiles
     , isBlockInbound
+    , isBlockPartialInbound
     , isValidBlock
     , placeBlock
     , Dir(..)
@@ -22,7 +23,11 @@ module Blokus
     , trans
     , available
     , currentPlayer
+    , genSuccBlock
+    , genPredBlock
+    , polyToBlock
     ) where
+import Control.Monad (liftM)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import Lens.Micro.Platform
@@ -38,10 +43,18 @@ corners = [(-1, -1), (boardSize, -1), (boardSize, boardSize), (-1, boardSize)]
 
 -- | Polyomino names
 data Polyomino = I1 | I2 | I3 | L3 | I4 | L4 | N4 | O4 | T4 | F | I | L | N | P | T | U | V | W | X | Y | Z
-    deriving (Eq, Show, Read)
+    deriving (Eq, Show, Read, Enum)
 
 polyominoes :: [Polyomino]
-polyominoes = [I1, I2, I3, L3, I4, L4, N4, O4, T4, F, I, L, N, P, T, U, V, W, X, Y, Z]
+polyominoes = [I1 .. Z]
+
+succPoly :: Polyomino -> Polyomino
+succPoly Z = I1
+succPoly pm = succ pm
+
+predPoly :: Polyomino -> Polyomino
+predPoly I1 = Z
+predPoly pm = pred pm
 
 -- | Tiles of a polyomino
 polyominoTiles :: Polyomino -> [V2]
@@ -70,7 +83,7 @@ polyominoTiles Z = [(0, -1), (1, -1), (0, 0), (-1, 1), (0, 1)]
 
 -- | Dihedral group for rotation
 data D8 = D8 Int Int
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read)
 
 -- | Composition of two D8 group elements
 compose :: D8 -> D8 -> D8
@@ -92,10 +105,10 @@ act (D8 s t) z = act (D8 (mod s 4) (mod t 2)) z
 
 -- | Player (color)
 data Player = Blue | Green | Red | Yellow | Def
-    deriving (Eq, Show)
+    deriving (Eq, Show, Read, Enum)
 
 players :: [Player]
-players = [Blue, Green, Red, Yellow]
+players = [Blue .. Yellow]
 
 -- | Block, a instantiated polyomino
 data Block = Block
@@ -103,7 +116,7 @@ data Block = Block
     , _center :: V2
     , _direction :: D8
     , _player :: Player
-    } deriving (Eq, Show)
+    } deriving (Show, Read)
 makeLenses ''Block
 
 type Board = M.Map V2 Player
@@ -113,7 +126,7 @@ data Game = Game
     , _history :: [Block]
     , _currentIndex :: Int
     , _currentBlock :: Maybe Block
-    }
+    } deriving (Show, Read)
 makeLenses ''Game
 
 blockTiles :: Block -> [V2]
@@ -140,6 +153,9 @@ isPosInbound (x, y) = 0 <= x && x < boardSize && 0 <= y && y < boardSize
 isBlockInbound :: Block -> Bool
 isBlockInbound k = all isPosInbound $ blockTiles k
 
+isBlockPartialInbound :: Block -> Bool
+isBlockPartialInbound k = any isPosInbound $ blockTiles k
+
 isValidBlock :: Board -> Block -> Bool
 isValidBlock b k = all (isPosFree b) t && not (any (isPosBad b $ _player k) t) && any (isPosGood b $ _player k) t && all isPosInbound t
     where t = blockTiles k
@@ -160,8 +176,30 @@ trans DD = add (0, -1)
 trans LL = add (-1, 0)
 trans RR = add (1, 0)
 
-available :: Game -> Polyomino -> Player -> Bool
-available g pm p = not $ any (\k -> _shape k == pm && _player k == p) $ _history g
+available :: Game -> Player -> Polyomino -> Bool
+available g p pm= not $ any (\k -> _shape k == pm && _player k == p) $ _history g
 
 currentPlayer :: Game -> Player
 currentPlayer g = M.findWithDefault Def (corners !! _currentIndex g) $ _board g
+
+
+genAvailBlockOr :: Game -> (Polyomino -> Polyomino) -> Polyomino -> Maybe Polyomino
+genAvailBlockOr g f pm = nxt $ (f pm)
+    where
+        nxt x
+            | x == pm = Nothing
+            | available g p x = Just x
+            | otherwise = nxt $ f x
+        p = currentPlayer g
+
+genSuccBlock :: Game -> Maybe Block
+genSuccBlock g = liftM (polyToBlock g) $ genAvailBlockOr g succPoly (fromMaybe Z $ liftM _shape $ _currentBlock g)
+
+genPredBlock :: Game -> Maybe Block
+genPredBlock g = liftM (polyToBlock g) $ genAvailBlockOr g predPoly (fromMaybe I1 $ liftM _shape $ _currentBlock g)
+
+polyToBlock :: Game -> Polyomino -> Block
+polyToBlock g pm =
+    case _currentBlock g of
+        Nothing -> Block pm (0, 0) (D8 0 0) $ currentPlayer g
+        Just k -> k {_shape = pm}
