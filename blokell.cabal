@@ -37,6 +37,7 @@ library
     , brick
     , containers
     , microlens-platform
+    , time
     , vty
   default-language: Haskell2010
 
@@ -54,6 +55,7 @@ executable blokell
     , containers
     , microlens-platform
     , optparse-applicative
+    , time
     , vty
   default-language: Haskell2010
 
@@ -71,5 +73,6 @@ test-suite blokell-test
     , brick
     , containers
     , microlens-platform
+    , time
     , vty
   default-language: Haskell2010

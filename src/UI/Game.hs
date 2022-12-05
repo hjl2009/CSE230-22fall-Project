@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module UI.Game
-    ( playGame
-    , theMap
+    ( Opts(..)
+    , playGame
     ) where
 
 import Blokus
@@ -13,15 +13,18 @@ import qualified Data.Map as M
 import qualified Graphics.Vty as V
 import Lens.Micro.Platform
 import Text.Read (readMaybe)
-import Data.Maybe (fromMaybe)
 import Data.Char (toUpper)
+import Data.List
+import Data.Maybe (fromMaybe)
+import Data.Time.Clock
+import Data.Time.Format.ISO8601 (iso8601Show)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 type Name = ()
 
 data Gameplay = Gameplay
     { _game :: Game
-    , _title :: String
+    , _filename :: String
     }
 makeLenses ''Gameplay
 
@@ -34,12 +37,28 @@ app = App
     , appAttrMap = const theMap
     }
 
-initGame :: Game
--- initGame = Game M.empty [] 0 Nothing
-initGame = Game (M.fromList $ zip corners [Red, Green, Blue, Yellow]) [] 0 Nothing
+data Opts = Opts
+    { _loadFilename :: Maybe String
+    , _saveFilename :: Maybe String
+    }
 
-playGame :: IO ()
-playGame = void $ defaultMain app $ Gameplay initGame "a"
+initGame :: Game
+initGame = Game (M.fromList $ zip outerCorners [Red, Green, Blue, Yellow]) [] 0 Nothing
+
+extension :: String
+extension = ".blokell"
+
+toFileName :: String -> String
+toFileName s = if extension `isSuffixOf` s then s else s ++ extension
+
+playGame :: Opts -> IO ()
+playGame o = do
+    let Opts l s = o
+    g <- case l of
+        Just l' -> readFile (toFileName l') <&> readMaybe
+        Nothing -> return Nothing
+    s' <- ("game" ++ ) . iso8601Show <$> getCurrentTime
+    void $ defaultMain app $ Gameplay (fromMaybe initGame g) $ toFileName $ fromMaybe s' s
 
 drawUI :: Gameplay -> [Widget Name]
 drawUI g = [C.center $ drawBoard g]
@@ -59,6 +78,7 @@ toAttr f b = attrName (show f ++ show b)
 appEvent :: BrickEvent Name e -> EventM Name Gameplay ()
 appEvent (VtyEvent e) = case e of
     V.EvKey V.KEsc [] -> halt
+    V.EvKey (V.KChar 'q') [] -> halt
     V.EvKey V.KEnter [] -> do
         g <- use game
         s <- suspendAndResume' getLine
@@ -83,7 +103,7 @@ appEvent (VtyEvent e) = case e of
     V.EvKey (V.KChar 'd') [] -> rotate $ D8 2 1
     V.EvKey (V.KChar 'r') [] -> rotate $ D8 3 0
     V.EvKey (V.KChar 'e') [] -> rotate $ D8 1 0
-    V.EvKey (V.KChar 's') [] -> get >>= \g -> liftIO $ writeFile (_title g ++ ".blokell") $ show $ _game g
+    V.EvKey (V.KChar 's') [] -> get >>= \g -> liftIO $ writeFile (_filename g) $ show $ _game g
     _ -> return ()
 appEvent _ = return ()
 

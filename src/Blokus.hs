@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Blokus
     ( boardSize
-    , corners
+    , outerCorners
     , Polyomino(..)
     , polyominoes
     , polyominoTiles
@@ -30,7 +30,8 @@ module Blokus
 import Control.Monad (liftM)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
-import Lens.Micro.Platform
+import Lens.Micro.Platform ( makeLenses )
+import Data.List (find)
 
 boardSize :: Int
 boardSize = 20
@@ -38,8 +39,9 @@ boardSize = 20
 -- | Vector of two integers
 type V2 = (Int, Int)
 
-corners :: [V2]
-corners = [(-1, -1), (boardSize, -1), (boardSize, boardSize), (-1, boardSize)]
+innerCorners, outerCorners :: [V2]
+innerCorners = [(0, 0), (boardSize - 1, 0), (boardSize - 1, boardSize - 1), (0, boardSize - 1)]
+outerCorners = [(-1, -1), (boardSize, -1), (boardSize, boardSize), (-1, boardSize)]
 
 -- | Polyomino names
 data Polyomino = I1 | I2 | I3 | L3 | I4 | L4 | N4 | O4 | T4 | F | I | L | N | P | T | U | V | W | X | Y | Z
@@ -180,7 +182,7 @@ available :: Game -> Player -> Polyomino -> Bool
 available g p pm= not $ any (\k -> _shape k == pm && _player k == p) $ _history g
 
 currentPlayer :: Game -> Player
-currentPlayer g = M.findWithDefault Def (corners !! _currentIndex g) $ _board g
+currentPlayer g = M.findWithDefault Def (outerCorners !! _currentIndex g) $ _board g
 
 
 genAvailBlockOr :: Game -> (Polyomino -> Polyomino) -> Polyomino -> Maybe Polyomino
@@ -201,5 +203,8 @@ genPredBlock g = liftM (polyToBlock g) $ genAvailBlockOr g predPoly (fromMaybe I
 polyToBlock :: Game -> Polyomino -> Block
 polyToBlock g pm =
     case _currentBlock g of
-        Nothing -> Block pm (0, 0) (D8 0 0) $ currentPlayer g
+        Nothing -> Block pm (playerPos g) (D8 0 0) $ currentPlayer g
         Just k -> k {_shape = pm}
+
+playerPos :: Game -> V2
+playerPos g = fromMaybe (innerCorners !! _currentIndex g) $ (find ((== currentPlayer g) . _player) $ _history g) >>= return . _center
