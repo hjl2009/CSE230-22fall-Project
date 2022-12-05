@@ -14,9 +14,9 @@ import qualified Graphics.Vty as V
 import Lens.Micro.Platform
 import Text.Read (readMaybe)
 import Data.Char (toUpper)
-import Data.List
+import Data.List (isSuffixOf, sortOn)
 import Data.Maybe (fromMaybe)
-import Data.Time.Clock
+import Data.Time.Clock (getCurrentTime)
 import Data.Time.Format.ISO8601 (iso8601Show)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
@@ -61,7 +61,7 @@ playGame o = do
     void $ defaultMain app $ Gameplay (fromMaybe initGame g) $ toFileName $ fromMaybe s' s
 
 drawUI :: Gameplay -> [Widget Name]
-drawUI g = [C.center $ drawBoard g]
+drawUI g = [C.center $ drawStats (_game g) <+> drawBoard g]
 
 drawBoard :: Gameplay -> Widget Name
 drawBoard g = B.borderWithLabel (str $ show $ g^.game.currentBlock)
@@ -71,6 +71,25 @@ drawBoard g = B.borderWithLabel (str $ show $ g^.game.currentBlock)
                     Nothing -> ("  ", Def)
                     Just k -> (if elem (x, y) $ blockTiles k then "[]" else "  ", _player k)
             in toAttr f (fromMaybe Def $ M.lookup (x, y) $ g^.game.board) `withAttr` str w
+
+drawStats :: Game -> Widget Name
+drawStats g = B.border . setAvailableSize (13, 9) . padTop (Pad 1) . vBox . map (uncurry (drawStat' pp)) . computeStats $ g
+    where pp = currentPlayer g
+
+drawFinalStats :: Game -> Widget Name
+drawFinalStats = B.border . setAvailableSize (13, 9) . padTop (Pad 1) . vBox . map (uncurry drawStat) . sortOn (negate . snd) . reverse . computeStats
+
+computeStats :: Game -> [(Player, Int)]
+computeStats g = map (\x -> g^.board.at x.non Def) outerCorners <&> \p -> (p, sum [length $ polyominoTiles pm | Block pm _ _ p' <- _history g, p == p'])
+
+drawInnerStat :: (Widget n1 -> Widget n2) -> Player -> Int -> Widget n2
+drawInnerStat f p x = f (toAttr Def p `withAttr` str "  ") <+> padLeft Max (padRight (Pad 2) $ str $ show x)
+
+drawStat :: Player -> Int -> Widget Name
+drawStat p x = padBottom (Pad 1) $ drawInnerStat (padLeftRight 2) p x
+
+drawStat' :: Player -> Player -> Int -> Widget Name
+drawStat' p' p x = padBottom (Pad 1) $ padLeftRight 2 (str $ if p == p' then "o" else " ") <+> drawInnerStat (padRight $ Pad 2) p x
 
 toAttr :: Player -> Player -> AttrName
 toAttr f b = attrName (show f ++ show b)

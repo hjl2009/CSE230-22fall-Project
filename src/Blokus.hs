@@ -19,7 +19,6 @@ module Blokus
     , isValidBlock
     , placeBlock
     , Dir(..)
-    , add
     , trans
     , available
     , currentPlayer
