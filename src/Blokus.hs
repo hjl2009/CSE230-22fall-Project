@@ -1,6 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 module Blokus
     ( boardSize
+    , V2
     , outerCorners
     , Polyomino(..)
     , polyominoes
@@ -14,10 +15,12 @@ module Blokus
     , Block(..), shape, center, direction
     , Game(..), board, history, currentIndex, currentBlock
     , blockTiles
+    , isPosInbound
     , moveBlockInbound
     , isValidBlock
     , placeBlock
     , Dir(..)
+    , add
     , trans
     , available
     , currentPlayer
@@ -43,7 +46,7 @@ outerCorners = [(-1, -1), (boardSize, -1), (boardSize, boardSize), (-1, boardSiz
 
 -- | Polyomino names
 data Polyomino = I1 | I2 | I3 | L3 | I4 | L4 | N4 | O4 | T4 | F | I | L | N | P | T | U | V | W | X | Y | Z
-    deriving (Eq, Show, Read, Enum)
+    deriving (Eq, Show, Read, Enum, Ord)
 
 polyominoes :: [Polyomino]
 polyominoes = [I1 .. Z]

@@ -5,6 +5,7 @@ module UI.Game
     ) where
 
 import Blokus
+import Blokus.AI
 import Brick
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
@@ -14,6 +15,7 @@ import qualified Graphics.Vty as V
 import Lens.Micro.Platform
 import Text.Read (readMaybe)
 import Data.Char (toUpper)
+import Data.Foldable (forM_)
 import Data.List (isSuffixOf, sortOn)
 import Data.Maybe (fromMaybe)
 import Data.Time.Clock (getCurrentTime)
@@ -116,17 +118,22 @@ appEvent (VtyEvent e) = case e of
         g <- use game
         case _currentBlock g of
             Nothing -> return ()
-            Just k -> when (isValidBlock (_board g) k) $ game.board %= placeBlock k >> game.history %= (k :) >> nextPlayer
+            Just k -> when (isValidBlock (_board g) k) $ applyBlock k >> nextPlayer
     V.EvKey (V.KChar 'p') [] -> nextPlayer
     V.EvKey (V.KChar 'f') [] -> rotate $ D8 0 1
     V.EvKey (V.KChar 'd') [] -> rotate $ D8 2 1
     V.EvKey (V.KChar 'r') [] -> rotate $ D8 3 0
     V.EvKey (V.KChar 'e') [] -> rotate $ D8 1 0
     V.EvKey (V.KChar 's') [] -> get >>= \g -> liftIO $ writeFile (_filename g) $ show $ _game g
+    V.EvKey (V.KChar 'i') [] -> do
+        g <- use game
+        forM_ (runAI simpleAI g) applyBlock
+        nextPlayer
     _ -> return ()
 appEvent _ = return ()
 
-
+applyBlock :: Block -> EventM Name Gameplay ()
+applyBlock k = game . board %= placeBlock k >> game . history %= (k :)
 
 nextPlayer :: EventM Name Gameplay ()
 nextPlayer = (game.currentIndex %= \i -> mod (i + 1) 4) >> game.currentBlock .= Nothing
