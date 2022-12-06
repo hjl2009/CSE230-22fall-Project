@@ -8,6 +8,10 @@ import Blokus
 import Brick
 import qualified Brick.Widgets.Border as B
 import qualified Brick.Widgets.Center as C
+import Brick.Widgets.Core (str, clickable, padLeftRight, padTopBottom,
+ withDefAttr, translateBy, padBottom, (<=>), setAvailableSize,
+ padLeft, padRight, padTop, (<+>))
+import Brick.Types as T 
 import Control.Monad (void, when)
 import qualified Data.Map as M
 import qualified Graphics.Vty as V
@@ -21,6 +25,7 @@ import Data.Time.Format.ISO8601 (iso8601Show)
 import Control.Monad.IO.Class (MonadIO(liftIO))
 
 type Name = ()
+ 
 
 data Gameplay = Gameplay
     { _game :: Game
@@ -61,7 +66,7 @@ playGame o = do
     void $ defaultMain app $ Gameplay (fromMaybe initGame g) $ toFileName $ fromMaybe s' s
 
 drawUI :: Gameplay -> [Widget Name]
-drawUI g = [C.center $ drawStats (_game g) <+> drawBoard g]
+drawUI g = [C.center $ drawStats (_game g) <+> drawBoard g <+> buttonLayer g]
 
 drawBoard :: Gameplay -> Widget Name
 drawBoard g = B.borderWithLabel (str $ show $ g^.game.currentBlock)
@@ -78,6 +83,19 @@ drawStats g = B.border . setAvailableSize (13, 9) . padTop (Pad 1) . vBox . map 
 
 drawFinalStats :: Game -> Widget Name
 drawFinalStats = B.border . setAvailableSize (13, 9) . padTop (Pad 1) . vBox . map (uncurry drawStat) . sortOn (negate . snd) . reverse . computeStats
+
+buttonLayer :: Gameplay -> Widget Name
+buttonLayer st =
+    C.vCenterLayer $
+      C.hCenterLayer (padBottom (Pad 1) $ str "[ : Prev Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "] : Next Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "E/R : rotate Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "D/F : overturn Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "space : Place Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "up/down/right/left : Move Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "esc : Exit Game")
+
+
 
 computeStats :: Game -> [(Player, Int)]
 computeStats g = map (\x -> g^.board.at x.non Def) outerCorners <&> \p -> (p, sum [length $ polyominoTiles pm | Block pm _ _ p' <- _history g, p == p'])
@@ -125,8 +143,6 @@ appEvent (VtyEvent e) = case e of
     V.EvKey (V.KChar 's') [] -> get >>= \g -> liftIO $ writeFile (_filename g) $ show $ _game g
     _ -> return ()
 appEvent _ = return ()
-
-
 
 nextPlayer :: EventM Name Gameplay ()
 nextPlayer = (game.currentIndex %= \i -> mod (i + 1) 4) >> game.currentBlock .= Nothing
