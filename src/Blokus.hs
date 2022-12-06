@@ -28,7 +28,6 @@ module Blokus
     , genPredBlock
     , polyToBlock
     ) where
-import Control.Monad (liftM)
 import qualified Data.Map as M
 import Data.Maybe (fromMaybe)
 import Lens.Micro.Platform
@@ -203,10 +202,10 @@ genAvailBlockOr g f pm = nxt $ f pm
         p = currentPlayer g
 
 genSuccBlock :: Game -> Maybe Block
-genSuccBlock g = liftM (polyToBlock g) $ genAvailBlockOr g succPoly (fromMaybe Z $ liftM _shape $ _currentBlock g)
+genSuccBlock g = polyToBlock g <$> genAvailBlockOr g succPoly (maybe Z _shape $ _currentBlock g)
 
 genPredBlock :: Game -> Maybe Block
-genPredBlock g = liftM (polyToBlock g) $ genAvailBlockOr g predPoly (fromMaybe I1 $ liftM _shape $ _currentBlock g)
+genPredBlock g = polyToBlock g <$> genAvailBlockOr g predPoly (maybe I1 _shape $ _currentBlock g)
 
 polyToBlock :: Game -> Polyomino -> Block
 polyToBlock g pm = moveBlockInbound $ case _currentBlock g of

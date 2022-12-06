@@ -13,6 +13,10 @@ opts = Opts
         (  long "name"
         <> short 'n'
         ))
+    <*> switch
+        (  long "pass-no-move"
+        <> short 'p'
+        )
 
 fullopts = info (helper <*> opts)
     (  fullDesc

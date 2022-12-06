@@ -5,6 +5,7 @@
 module Blokus.AI
     ( StatelessDeterministicAI(..)
     , simpleAI
+    , naiveAI
     ) where
 
 import Blokus
@@ -19,32 +20,82 @@ data GameInfo = GameInfo
     { _iColors :: A.Array V2 Player
     , _iPlayer :: Player
     , _iPieces :: S.Set Polyomino
+    , _iRange :: (V2, V2)
+    , _iCount :: Int
     }
 
 type MyAI = Game -> GameInfo -> Maybe Block
 
 instance StatelessDeterministicAI Game (Maybe Block) MyAI where
     runAI :: MyAI -> Game -> Maybe Block
-    runAI a g = a g $ info g
+    runAI a g = a g $ infoGame g
 
 zeroAI :: MyAI
 zeroAI _ _ = Nothing
 
-info :: Game -> GameInfo
-info g = GameInfo boardColors p (S.fromList $ filter (available g p) polyominoes)
+updateInterval :: Int -> V2 -> V2
+updateInterval x (l, r) = (min l x, max r x)
+
+updateRange :: V2 -> (V2, V2) -> (V2, V2)
+updateRange (x, y) (l, r) = (updateInterval x l, updateInterval y r)
+
+combineRange :: (V2, V2) -> (V2, V2) -> (V2, V2)
+combineRange ((x1, x2), (y1, y2)) = updateRange (x1, y1) . updateRange (x2, y2)
+
+rangeH :: (V2, V2) -> Int
+rangeH ((x1, x2), (y1, y2)) = x + y + min x y
+    where
+        x = x2 - x1
+        y = y2 - y1
+
+emptyInterval :: (Int, Int)
+emptyInterval = (boardSize + 1, -2)
+
+emptyRange :: (V2, V2)
+emptyRange = (emptyInterval, emptyInterval)
+
+rangeBlock :: Block -> (V2, V2)
+rangeBlock k = foldr updateRange emptyRange $ blockTiles k
+
+infoGame :: Game -> GameInfo
+infoGame g = GameInfo a p (S.fromList $ filter (available g p) polyominoes) r c
     where
         p = currentPlayer g
         b = _board g
-        boardColors= A.array ((-1, -1), (boardSize, boardSize))
+        a = A.array ((-1, -1), (boardSize, boardSize))
             [ ((x, y), M.findWithDefault Def (x, y) b)
             | x <- [-1 .. boardSize]
             , y <- [-1 .. boardSize]
             ]
+        r = M.foldlWithKey' (\rr x _ -> updateRange x rr) emptyRange $ M.filter (== p) b
+        c = countValid p a
+
+countValid :: Player -> A.Array V2 Player -> Int
+countValid p a = sum
+    [ if predicate (x, y) then 1 else 0
+    | x <- [0 .. boardSize - 1]
+    , y <- [0 .. boardSize - 1]
+    ]
+    where predicate x = free && good && not bad
+            where
+                free = Def == a A.! x
+                good = p `elem` [a A.! add x y | y <- [(1, 1), (1, -1), (-1, 1), (-1, -1)]]
+                bad = p `elem` [a A.! add x y | y <- [(-1, 0), (1, 0), (0, -1), (0, 1)]]
+
+countH :: Player -> A.Array V2 Player -> Block -> Int
+countH p a k = countValid p $ a A.// [(x, p) | x <- blockTiles k]
 
 composeSeq :: MyAI -> MyAI -> MyAI
 composeSeq a b g i = case a g i of
     Just ma -> Just ma
     Nothing -> b g i
+
+heuristics :: Game -> GameInfo -> Block -> Int
+heuristics g i k = rangeH (combineRange r $ rangeBlock k) - rangeH r + countH (_iPlayer i) (_iColors i) k - _iCount i
+    where r = _iRange i
+
+chooseH :: (Ord k) => (Block -> k) -> Block -> Block -> Block
+chooseH h a b = if h b > h a then b else a
 
 composeWith :: (Block -> Block -> Block) -> MyAI -> MyAI -> MyAI
 composeWith f a b g i = case a g i of
@@ -55,7 +106,7 @@ composeWith f a b g i = case a g i of
 
 leveledGreedyAITemplate :: (MyAI -> MyAI -> MyAI) -> MyAI
 leveledGreedyAITemplate c g i = (foldl composeSeq zeroAI $ map levelAI [5, 4 .. 1]) g i
-    where levelAI = foldr (c . polyominoAITemplate c) zeroAI . filter (\x -> S.member x $ _iPieces i) . polyominoesSized
+    where levelAI = foldr (c . polyominoAITemplate c) zeroAI . filter (`S.member` _iPieces i) . polyominoesSized
 
 polyominoesSized :: Int -> [Polyomino]
 polyominoesSized 5 = [F .. Z]
@@ -119,3 +170,6 @@ dirs D8g = [D8 0 0]
 
 simpleAI :: MyAI
 simpleAI = leveledGreedyAITemplate composeSeq
+
+naiveAI :: MyAI
+naiveAI g i = (leveledGreedyAITemplate $ composeWith $ chooseH $ heuristics g i) g i
