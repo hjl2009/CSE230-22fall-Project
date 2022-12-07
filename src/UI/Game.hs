@@ -68,7 +68,7 @@ isOver :: Gameplay -> Bool
 isOver g = _passCount g == 4
 
 drawUI :: Gameplay -> [Widget Name]
-drawUI g = [C.center $ (drawLeft g <+> drawBoard g) <=> drawPieces g]
+drawUI g = [C.center $ (drawLeft g <+> drawBoard g <+> drawControlOptions g) <=> drawPieces g]
 
 drawLeft :: Gameplay -> Widget Name
 drawLeft g = setAvailableSize (15, 22) $ drawGameOver (isOver g) <=> drawStats (_game g)
@@ -104,6 +104,21 @@ drawStat p' p x =  padLeftRight 2 (str $ if p == p' then "o" else " ") <+> drawI
 
 drawGameOver :: Bool -> Widget Name
 drawGameOver x = C.center $ if x then str "GAME OVER" else str " "
+
+drawControlOptions :: Gameplay -> Widget Name
+drawControlOptions  g =
+    C.vCenterLayer $
+    C.hCenterLayer (padBottom (Pad 2) $ str "Control Options:") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "Z : Prev Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "X : Next Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "E/R : rotate Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "D/F : overturn Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "space : Place Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "up/down/right/left : Move Block") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "I : simple AI movement") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "J : naive AI movement") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "P : pass") <=>
+      C.hCenterLayer (padBottom (Pad 1) $ str "esc : Exit Game")
 
 toAttr :: Player -> Player -> AttrName
 toAttr f b = attrName (show f ++ show b)
