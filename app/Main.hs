@@ -17,7 +17,11 @@ opts = Opts
         (  long "pass-no-move"
         <> short 'p'
         )
+    <*> switch
+        (  long "hint"
+        )
 
+fullopts :: ParserInfo Opts
 fullopts = info (helper <*> opts)
     (  fullDesc
     <> header "blokell - the Haskell implementation of a famous board game"

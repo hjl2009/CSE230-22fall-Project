@@ -29,6 +29,7 @@ data Gameplay = Gameplay
     , _filename :: String
     , _passCount :: Int
     , _noCheckPass :: Bool
+    , _hint :: Bool
     }
 makeLenses ''Gameplay
 
@@ -45,6 +46,7 @@ data Opts = Opts
     { _loadFilename :: Maybe String
     , _saveFilename :: Maybe String
     , _checkedPass :: Bool
+    , _enableHint :: Bool
     }
 
 extension :: String
@@ -55,12 +57,12 @@ toFileName s = if extension `isSuffixOf` s then s else s ++ extension
 
 playGame :: Opts -> IO ()
 playGame o = do
-    let Opts l s c = o
+    let Opts l s c h = o
     g <- case l of
         Just l' -> readFile (toFileName l') <&> readMaybe
         Nothing -> return Nothing
     s' <- ("game" ++ ) . iso8601Show <$> getCurrentTime
-    void $ defaultMain app $ Gameplay (fromMaybe initGame g) (toFileName $ fromMaybe s' s) 0 (not c)
+    void $ defaultMain app $ Gameplay (fromMaybe initGame g) (toFileName $ fromMaybe s' s) 0 (not c) h
 
 isOver :: Gameplay -> Bool
 isOver g = _passCount g == 4
@@ -149,6 +151,11 @@ appEventInner (VtyEvent e) = case e of
         g <- use game
         forM_ (runAI naiveAI g) applyBlock
         pass
+    V.EvKey (V.KChar 'h') [] -> use hint >>= \h -> when h $ do
+        g <- use game
+        case _currentBlock g of
+            Nothing -> return ()
+            Just k -> game.currentBlock._Just .= fromMaybe k (runAI (hintAI $ _shape k) g)
     _ -> return ()
 appEventInner _ = return ()
 

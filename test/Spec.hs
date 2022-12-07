@@ -35,7 +35,7 @@ applyNTimes n f x
     | otherwise = f $ applyNTimes (n - 1) f x
 
 makeMove :: MyAI -> Game -> Game
-makeMove i g = (currentIndex %~ \i -> mod (i + 1) 4) $ case runAI i g of
+makeMove i g = (currentIndex %~ \x -> mod (x + 1) 4) $ case runAI i g of
     Nothing -> g
     Just k -> (board %~ placeBlock k) $ (history %~ (k :)) g
 

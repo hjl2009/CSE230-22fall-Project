@@ -7,6 +7,7 @@ module Blokus.AI
     , MyAI
     , simpleAI
     , naiveAI
+    , hintAI
     ) where
 
 import Blokus
@@ -174,3 +175,6 @@ simpleAI = leveledGreedyAITemplate composeSeq
 
 naiveAI :: MyAI
 naiveAI g i = (leveledGreedyAITemplate $ composeWith $ chooseH $ heuristics g i) g i
+
+hintAI :: Polyomino -> MyAI
+hintAI = polyominoAITemplate composeSeq
