@@ -47,9 +47,6 @@ data Opts = Opts
     , _checkedPass :: Bool
     }
 
-initGame :: Game
-initGame = Game (M.fromList $ zip outerCorners [Red, Green, Blue, Yellow]) [] 0 Nothing
-
 extension :: String
 extension = ".blokell"
 

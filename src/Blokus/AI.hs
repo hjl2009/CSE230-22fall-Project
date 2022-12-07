@@ -4,6 +4,7 @@
 
 module Blokus.AI
     ( StatelessDeterministicAI(..)
+    , MyAI
     , simpleAI
     , naiveAI
     ) where

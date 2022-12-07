@@ -14,6 +14,7 @@ module Blokus
     , players
     , Block(..), shape, center, direction
     , Game(..), board, history, currentIndex, currentBlock
+    , initGame
     , blockTiles
     , isPosInbound
     , moveBlockInbound
@@ -131,6 +132,9 @@ data Game = Game
     } deriving (Show, Read)
 makeLenses ''Game
 
+initGame :: Game
+initGame = Game (M.fromList $ zip outerCorners [Red, Green, Blue, Yellow]) [] 0 Nothing
+
 blockTiles :: Block -> [V2]
 blockTiles k = map (add (_center k) . act (_direction k)) $ polyominoTiles $ _shape k
 
@@ -186,11 +190,10 @@ trans LL = add (-1, 0)
 trans RR = add (1, 0)
 
 available :: Game -> Player -> Polyomino -> Bool
-available g p pm= not $ any (\k -> _shape k == pm && _player k == p) $ _history g
+available g p pm = not $ any (\k -> _shape k == pm && _player k == p) $ _history g
 
 currentPlayer :: Game -> Player
 currentPlayer g = M.findWithDefault Def (outerCorners !! _currentIndex g) $ _board g
-
 
 genAvailBlockOr :: Game -> (Polyomino -> Polyomino) -> Polyomino -> Maybe Polyomino
 genAvailBlockOr g f pm = nxt $ f pm
