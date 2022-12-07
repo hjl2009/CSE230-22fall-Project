@@ -68,7 +68,7 @@ isOver :: Gameplay -> Bool
 isOver g = _passCount g == 4
 
 drawUI :: Gameplay -> [Widget Name]
-drawUI g = [C.center $ (drawLeft g <+> drawBoard g) <=> drawPieces g]
+drawUI g = [C.center $ ((drawLeft g <+> drawBoard g) <=> drawPieces g) <+> drawControlOptions]
 
 drawLeft :: Gameplay -> Widget Name
 drawLeft g = setAvailableSize (15, 22) $ drawGameOver (isOver g) <=> drawStats (_game g)
@@ -104,6 +104,26 @@ drawStat p' p x =  padLeftRight 2 (str $ if p == p' then "o" else " ") <+> drawI
 
 drawGameOver :: Bool -> Widget Name
 drawGameOver x = C.center $ if x then str "GAME OVER" else str " "
+
+drawControlOptions :: Widget Name
+drawControlOptions =
+    B.borderWithLabel (str "Control Options") $ vLimit 23 $ C.vCenter $
+    padTop (Pad 1) $ vBox $ map (uncurry drawControlOption)
+        [ ("Z", "previous piece")
+        , ("X", "next piece")
+        , ("E / R", "rotate piece")
+        , ("D / F", "overturn piece")
+        , ("Space", "place piece")
+        , ("Arrows", "move piece")
+        , ("I", "simple AI movement")
+        , ("J", "naive AI movement")
+        , ("H", "hint (if enabled)")
+        , ("P", "pass")
+        , ("Esc / Q", "exit game")
+        ]
+
+drawControlOption :: String -> String -> Widget Name
+drawControlOption l r = padBottom (Pad 1) $ hLimit 8 (padLeft Max $ str l) <+> padLeftRight 1 (str ":") <+> hLimit 19 (padRight Max $ str r)
 
 toAttr :: Player -> Player -> AttrName
 toAttr f b = attrName (show f ++ show b)
