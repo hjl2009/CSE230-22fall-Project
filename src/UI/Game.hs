@@ -171,7 +171,6 @@ move d = game.currentBlock._Just %= moveBlockInbound . (center %~ trans d)
 rotate :: D8 -> EventM Name Gameplay ()
 rotate d = game.currentBlock._Just %= moveBlockInbound . (direction %~ compose' d)
 
-
 toColor :: Player -> V.Color
 toColor Blue = V.blue
 toColor Green = V.green

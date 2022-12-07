@@ -87,17 +87,17 @@ countValid p a = sum
 countH :: Player -> A.Array V2 Player -> Block -> Int
 countH p a k = countValid p $ a A.// [(x, p) | x <- blockTiles k]
 
-composeSeq :: MyAI -> MyAI -> MyAI
-composeSeq a b g i = case a g i of
-    Just ma -> Just ma
-    Nothing -> b g i
-
 heuristics :: Game -> GameInfo -> Block -> Int
 heuristics g i k = rangeH (combineRange r $ rangeBlock k) - rangeH r + countH (_iPlayer i) (_iColors i) k - _iCount i
     where r = _iRange i
 
 chooseH :: (Ord k) => (Block -> k) -> Block -> Block -> Block
 chooseH h a b = if h b > h a then b else a
+
+composeSeq :: MyAI -> MyAI -> MyAI
+composeSeq a b g i = case a g i of
+    Just ma -> Just ma
+    Nothing -> b g i
 
 composeWith :: (Block -> Block -> Block) -> MyAI -> MyAI -> MyAI
 composeWith f a b g i = case a g i of
@@ -107,7 +107,7 @@ composeWith f a b g i = case a g i of
         Just mb -> Just $ f ma mb
 
 leveledGreedyAITemplate :: (MyAI -> MyAI -> MyAI) -> MyAI
-leveledGreedyAITemplate c g i = (foldl composeSeq zeroAI $ map levelAI [5, 4 .. 1]) g i
+leveledGreedyAITemplate c g i = foldr (composeSeq . levelAI) zeroAI [5, 4 .. 1] g i
     where levelAI = foldr (c . polyominoAITemplate c) zeroAI . filter (`S.member` _iPieces i) . polyominoesSized
 
 polyominoesSized :: Int -> [Polyomino]
